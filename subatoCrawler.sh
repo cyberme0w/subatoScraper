@@ -1,19 +1,9 @@
 #!/bin/bash
 
-# This script crawls through Subato (https://www.subato.org) and 
-# looks for available ExerciseSheet pages.
 # Example url: https://procomp.cs.hs-rm.de/subato/ExerciseSheet/397
-# 
-# How does it work?
-# 1) Starting point is the first ExerciseSheet
-#    https://procomp.cs.hs-rm.de/subato/ExerciseSheet/0
-# 2) for loop goes until 50 non-valid results
-# 3) grab the page with curl and look for these specific tags
-#      <h4>(<span id="course">Objektorientierte Softwareentwicklung (AI)</span> <span id="term">WS 2017</span>)</h4>
-#      <h2><span id="number">Exercise Sheet 1</span></h2>
-#      <h3><span id="exerciseSheet">Klassen für Zeitangaben</span></h3>
-# 4) 
 
+# Grab args
+# TODO improve this
 if [ -n $1 ]; then 
   num=$1
 else
@@ -28,16 +18,14 @@ else
   echo "Grabbing Subato Exercise Sheets from $num to infinity!"
 fi
 
-
-
-
-
+# Generate useful strings
 url="https://procomp.cs.hs-rm.de/subato/ExerciseSheet/"
 course="<span id=\"course\">"
 close="</span>"
 number="<span id=\"number\">"
 exshet="<span id=\"exerciseSheet\">"
 
+# Loop over urls, curl them and if valid, display the exercise sheet
 for ((x=$num; x!=$max; x++))
 do
   txt=`curl --silent $url$x`
