@@ -5,9 +5,10 @@ The script loops over a given range of urls and checks if that url represents a 
 
 No harm intended. 
 
-# Planned Features
-* Improve speed -> why does each curl take so long?
-* Threaded gets might help further improve speed
+# TODO:
+* Convert to Java or C and reduce dependencies to improve portability
+* Find out why each curl takes so long
+* Multithreaded gets?
 * When given a path as argument, create the folder structure and download .zip files of each exercise (with further param to directly unzip, which might take longer)
 
 
