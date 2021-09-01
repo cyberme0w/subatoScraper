@@ -1,1 +1,1 @@
-gcc *.c -o subatoScraper -l curl
+gcc memoryStruct.h memoryStruct.c htmlExtractor.h htmlExtractor.c subatoScraper.c -o subatoScraper -l curl
