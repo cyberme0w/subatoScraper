@@ -123,6 +123,18 @@ Options:\n\
       }
     }
 
+    else if(strcmp(argv[curArg], "-d") == 0 || strcmp(argv[curArg], "--delay") == 0) {
+      curArg++;
+      if(curArg < argc && isNumber(argv[curArg])) {
+        delay = stringToNumber(argv[curArg]);
+        curArg++;
+      }
+      else {
+        printf("ERR: Option -d / --delay was used without providing a valid number. Aborting.\n");
+        exit(101);
+      }
+    }
+
     else if(strcmp(argv[curArg], "-x") == 0 || strcmp(argv[curArg], "--max") == 0) {
       curArg++;
       if(curArg < argc && isNumber(argv[curArg])) {
@@ -205,8 +217,9 @@ Options:\n\
             #ifdef _WIN32
             Sleep(delay/1000); // uses seconds instead of milis
             #else
-            nanosleep((const struct timespec[]){{1, delay * 1000000L}}, NULL);
+            usleep(delay * 1000);
             #endif
+            
 
             cleanMemoryStructContent(&chunk);
         }
