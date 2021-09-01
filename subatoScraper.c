@@ -1,9 +1,17 @@
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <unistd.h>
+#endif
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <curl/curl.h>
 #include <string.h>
 #include <unistd.h>
+#include "htmlExtractor.h"
+#include "memoryStruct.h"
 
 // Settings
 int minnum;
@@ -20,69 +28,67 @@ char* htmlStrCourse = "<span id=\"course\">";
 char* htmlStrClose = "</span>";
 char* htmlStrNum = "<span id=\"number\">";
 char* htmlStrExSheet = "<span id=\"exerciseSheet\">";
+char* htmlBadLink = "Exception";
 int curArg;
 CURL* curl;
 CURLcode res;
 bool ignoreCache;
 bool verbose;
-
-struct MemoryStruct {
-  char *memory;
-  size_t size;
-};
+int delay;
 
 static size_t WriteMemoryCallback(void* contents, size_t size, size_t nmemb, void* userp) {
-  // from https://curl.se/libcurl/c/getinmemory.html
-  size_t realsize = size * nmemb;
-  struct MemoryStruct *mem = (struct MemoryStruct*) userp;
+    // from https://curl.se/libcurl/c/getinmemory.html
+    size_t realsize = size * nmemb;
+    MemoryStruct *mem = (MemoryStruct*) userp;
 
-  char* ptr = realloc(mem->memory, mem->size + realsize + 1);
+    char* ptr = realloc(mem->memory, mem->size + realsize + 1);
 
-  if(!ptr) {
-    // out of memory
-    printf("Not enough memory (realloc returned NULL)\n");
-    return 0;
-  }
+    if(!ptr) {
+        // out of memory
+        printf("Not enough memory (realloc returned NULL)\n");
+        return 0;
+    }
 
-  mem->memory = ptr;
-  memcpy(&(mem->memory[mem->size]), contents, realsize);
-  mem->size += realsize;
-  mem->memory[mem->size] = 0;
+    mem->memory = ptr;
+    memcpy(&(mem->memory[mem->size]), contents, realsize);
+    mem->size += realsize;
+    mem->memory[mem->size] = 0;
 
-  return realsize;
+    return realsize;
 }
 
 bool isNumber (char* str) {
-  while(*str != 0) {
-    if(*str < 48 || *str > 57) return false;
-    str++;
-  }
-  return true;
+    while(*str != 0) {
+        if(*str < 48 || *str > 57) return false;
+        str++;
+    }
+    return true;
 }
 
 int stringToNumber (char* str) {
-  int res = 0;
-  while(*str != 0) {
-    res *= 10;
-    res += *str - 48;
-    str++;
-  }
-  return res;
+    int res = 0;
+    while(*str != 0) {
+        res *= 10;
+        res += *str - 48;
+        str++;
+    }
+    return res;
 }
 
 int main(int argc, char** argv) {
 
-  // Set default settings
-  getcwd(pathToCWD, pathToCWD_len);
-  minnum = 0;
-  maxnum = 0;
-  curnum = 0;
-  curArg = 1;
-  verbose = false;
-  ignoreCache = false;
+    // Set default settings
+    getcwd(pathToCWD, pathToCWD_len);
+    minnum = 0;
+    maxnum = 0;
+    curnum = 0;
+    curArg = 1;
+    verbose = false;
+    ignoreCache = false;
+    delay = 2000;
 
-  // Arguments
-  while(curArg < argc) {
+    // Arguments
+    while(curArg < argc) {
     if(verbose) printf("Handling option #%d with content (%s)\n", curArg, argv[curArg]);
 
     if(strcmp(argv[curArg], "-h") == 0 || strcmp(argv[curArg], "--help") == 0) {
@@ -145,66 +151,68 @@ Options:\n\
     }
   }
 
-  // Init memory chunk for curl results
-  struct MemoryStruct chunk;
-  chunk.memory = malloc(1); // will be grown as necessary with realloc
-  chunk.size = 0; // no data yet
+    // Init memory chunk for curl results
+    MemoryStruct chunk = newMemoryStruct();
 
-  // Scraping
-  printf("Subato Scraper is starting...\n  min: %d\n  max: %d\n  delay: TODO\n  path: TODO\n  verbose: %d\n  ignoreCache: %d\n\n",
-         minnum, maxnum, verbose, ignoreCache);
+    if(verbose) printf("Subato Scraper is starting...\n  min: %d\n  max: %d\n  delay: TODO\n  path: TODO\n  verbose: %d\n  ignoreCache: %d\n\n",
+                minnum, maxnum, verbose, ignoreCache);
 
-  if(verbose) printf("Entering for loop to curl\n");
+    curl = curl_easy_init();
 
-  curl = curl_easy_init();
+    if(curl) {
+        if(verbose) printf("Starting curl\n");
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
 
-  if(curl) {
-    if(verbose) printf("Starting curl\n");
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
+        // Scraping Loop
+        for(; curnum <= maxnum; curnum++) {
+            //Allocate memory for current url
+            int length = snprintf(NULL, 0, "%d", curnum);
+            char str_curnum[length];
 
-    for(; curnum <= maxnum; curnum++) {
-      //Allocating memory for current url
-      int length = snprintf(NULL, 0, "%d", curnum);
-      char str_curnum[length];
+            //Convert curnum to string to append
+            sprintf(str_curnum, "%d", curnum);
 
-      //Converting curnum to string to append
-      sprintf(str_curnum, "%d", curnum);
+            //Append curnum to url
+            char url[50];
+            strcpy(url, strURL);
+            strcat(url, str_curnum);
 
-      //Appending curnum to url
-      char url[50];
-      strcpy(url, strURL);
-      strcat(url, str_curnum);
+            // run curl
+            curl_easy_setopt(curl, CURLOPT_URL, url);
+            res = curl_easy_perform(curl);
 
-      // run curl
-      curl_easy_setopt(curl, CURLOPT_URL, url);
-      res = curl_easy_perform(curl);
+            // check for errors
+            if(res != CURLE_OK) {
+                printf("WAR: Curl returns non-ok status\n%s", curl_easy_strerror(res));
+            } 
+            
+            else {
+                printf("Checking URL: %s\n", url);
 
-      // check for errors
-      if(res != CURLE_OK) {
-        printf("WAR: Curl returns non-ok status\n%s", curl_easy_strerror(res));
-      } else {
-        printf("%lu bytes retrieved\n from URL: %s\n", (unsigned long)chunk.size, url);
-        //printf("%s", chunk.memory);
+                if(!isValidSubatoHTML(chunk.memory)) {
+                  printf("  Invalid link (%d)...\n");
+                }
 
-        /*
-            do the html processing here
-        */
+                else {
+                  ExerciseSheet ex = extractSheetFromHTML(chunk.memory, verbose);
+                  printf("  Valid Link:\n    Module: %s\n    Number: %s\n    Title: %s\n", ex.moduleName, ex.sheetNumber, ex.sheetTitle);
+                }
+            }
 
-      }
-      free(chunk.memory);
+            #ifdef _WIN32
+            Sleep(delay/1000); // uses seconds instead of milis
+            #else
+            nanosleep((const struct timespec[]){{1, delay * 1000000L}}, NULL);
+            #endif
+
+            cleanMemoryStructContent(&chunk);
+        }
     }
-  }
 
-  // cleanup
-  curl_easy_cleanup(curl);
-  free(pathToCWD);
-  //free(strURL);
-  //free(htmlStrCourse);
-  //free(htmlStrClose);
-  //free(htmlStrNum);
-  //free(htmlStrExSheet);
-  //free(curl);
+    // cleanup
+    curl_easy_cleanup(curl);
+    free(pathToCWD);
 }
