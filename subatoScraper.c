@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
     curArg = 1;
     verbose = false;
     ignoreCache = false;
-    delay = 2000;
+    delay = 0000;
 
     // Arguments
     while(curArg < argc) {

@@ -25,3 +25,4 @@ It is possible to pass certain arguments to change the scraper's behaviour:
   * Usage: `subatoScraper -d 500` (set delay to 500ms).
   * Standard is no delay, which might be too spammy when looping over large ranges.
 * `-v (--verbose)` Set verbose output.
+* `-s (--savecontent)` Download the .zip files from the exercise sheet.
